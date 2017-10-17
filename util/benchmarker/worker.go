@@ -1,7 +1,6 @@
 package benchmarker
 
 import (
-	"errors"
 	"fmt"
 	_ "io/ioutil"
 	"math/rand"
@@ -9,7 +8,6 @@ import (
 	"net/url"
 	_ "strings"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/kaneta1992/simple-web-benchmarker/util/session"
 )
 
@@ -29,29 +27,12 @@ func NewWorker(status chan<- int, end <-chan bool) *Worker {
 }
 
 func getRandomUrl(response *http.Response) (*url.URL, error) {
-	baseUrl := response.Request.URL
-	doc, err := goquery.NewDocumentFromReader(response.Body)
+	analyzer, err := NewHttpAnalyzer(response)
+	urls, err := analyzer.GetLinks()
 	if err != nil {
 		return nil, err
 	}
-
-	urls := make([]string, 0)
-	doc.Find("a").Each(func(_ int, s *goquery.Selection) {
-		href, exists := s.Attr("href")
-		if exists {
-			reqUrl, err := baseUrl.Parse(href)
-			if err == nil {
-				urls = append(urls, reqUrl.String())
-			}
-		}
-	})
-
-	size := len(urls)
-	if size < 1 {
-		return nil, errors.New("not exist link")
-	}
-
-	return url.Parse(urls[rand.Intn(size)])
+	return urls[rand.Intn(len(urls))], nil
 }
 
 func (w *Worker) createRequestFromResponse(response *http.Response) (*http.Request, error) {
