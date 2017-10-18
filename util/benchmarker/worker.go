@@ -26,8 +26,7 @@ func NewWorker(status chan<- int, end <-chan bool) *Worker {
 	return w
 }
 
-func getRandomUrl(response *http.Response) (*url.URL, error) {
-	analyzer, err := NewHttpAnalyzer(response)
+func getRandomUrl(analyzer *HttpAnalyzer) (*url.URL, error) {
 	urls, err := analyzer.GetLinks()
 	if err != nil {
 		return nil, err
@@ -35,12 +34,35 @@ func getRandomUrl(response *http.Response) (*url.URL, error) {
 	return urls[rand.Intn(len(urls))], nil
 }
 
-func (w *Worker) createRequestFromResponse(response *http.Response) (*http.Request, error) {
-	nextUrl, err := getRandomUrl(response)
+func (w *Worker) createRequestFromResponse(analyzer *HttpAnalyzer) (*http.Request, error) {
+	nextUrl, err := getRandomUrl(analyzer)
 	if err != nil {
 		return nil, err
 	}
 	return w.httpSession.NewRequest("GET", nextUrl.String(), nil)
+}
+
+func (w *Worker) getResources(analyzer *HttpAnalyzer) error {
+	urls, err := analyzer.GetResourcesURL()
+	if err != nil {
+		return err
+	}
+	for _, v := range urls {
+		fmt.Printf("%v\n", v.String())
+		req, err := w.httpSession.NewRequest("GET", v.String(), nil)
+		if err != nil {
+			fmt.Printf("error resourse new request: %s\n", v.String())
+			continue
+		}
+		res, err := w.httpSession.SendRequest(req)
+		if err != nil {
+			fmt.Printf("error resourse send request: %s\n", v.String())
+			continue
+		}
+		fmt.Printf("%d\n", res.StatusCode)
+		res.Body.Close()
+	}
+	return nil
 }
 
 func (w *Worker) Start(startUrl string) error {
@@ -63,7 +85,9 @@ func (w *Worker) Start(startUrl string) error {
 			fmt.Printf("%d\n", response.StatusCode)
 			w.responseStatus <- response.StatusCode
 
-			request, err = w.createRequestFromResponse(response)
+			analyzer, err := NewHttpAnalyzer(response)
+			w.getResources(analyzer)
+			request, err = w.createRequestFromResponse(analyzer)
 			if err != nil {
 				request = defaultRequest
 			}
