@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/kaneta1992/simple-web-benchmarker/util/benchmarker"
+	"github.com/kaneta1992/garuru/util/benchmarker"
 )
 
 func main() {

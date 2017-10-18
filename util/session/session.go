@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	UserAgent = "benchmarker"
+	UserAgent = "garuru"
 )
 
 type Session struct {
