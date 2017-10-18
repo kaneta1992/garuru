@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/kaneta1992/simple-web-benchmarker/util/benchmarker"
-	"github.com/kaneta1992/simple-web-benchmarker/util/session"
-	"github.com/tonnerre/golang-pretty"
+	"fmt"
+	"github.com/kaneta1992/garuru/util/benchmarker"
+	"github.com/kaneta1992/garuru/util/session"
+	"io/ioutil"
 )
 
 func main() {
@@ -13,10 +14,31 @@ func main() {
 	// ret := b.Start(3)
 
 	// fmt.Printf("%v\n", ret)
+	// s := session.NewSession()
+	// req, _ := s.NewRequest("GET", "http://sed.jp/uploader.php", nil)
+	// res, _ := s.SendRequest(req)
+	// h, _ := benchmarker.NewHttpAnalyzer(res)
+	// forms, _ := h.GetForms()
+	// forms[2].AddKey("upfile")
+	// forms[2].AddParam("upfile", benchmarker.FileParam("./main.go"))
+	// forms[2].AddKey("t")
+	// forms[2].AddParam("t", benchmarker.TextParam("yaxa"))
+
+	// req = forms[2].BuildRequest()
+	// res, _ = s.SendRequest(req)
+
+	// b, _ := ioutil.ReadAll(res.Body)
+	// fmt.Printf("%d\n", res.StatusCode)
+	// fmt.Printf("%v\n", string(b))
+	// res.Body.Close()
 	s := session.NewSession()
-	req, _ := s.NewRequest("GET", "http://sed.jp/uploader.php", nil)
+	p := benchmarker.NewMultiPartParams()
+	p.AddParam("upfile", benchmarker.FileParam("./config.yml"))
+	p.AddParam("t", benchmarker.TextParam("textだよ"))
+	req := p.NewRequest("POST", "http://sed.jp/upload.php")
 	res, _ := s.SendRequest(req)
-	h, _ := benchmarker.NewHttpAnalyzer(res)
-	forms, _ := h.GetForms()
-	pretty.Printf("%v\n", *forms[0])
+	b, _ := ioutil.ReadAll(res.Body)
+	fmt.Printf("%d\n", res.StatusCode)
+	fmt.Printf("%v\n", string(b))
+	res.Body.Close()
 }

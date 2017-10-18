@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	UserAgent = "benchmarker"
+	UserAgent = "garuru"
 )
 
 type Session struct {
@@ -59,52 +59,6 @@ func (s *Session) NewPostFormRequest(url string, body io.Reader) (*http.Request,
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return req, err
-}
-
-func escapeQuotes(s string) string {
-	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(s)
-}
-
-func (s *Session) NewFileUploadRequest(url string, params map[string]string, paramName, filePath, contentType string) (*http.Request, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	// part, err := writer.CreateFormFile(paramName, filepath.Base(path))
-	// Content-Typeを指定できないので該当コードから実装
-	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition",
-		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
-			escapeQuotes(paramName), escapeQuotes(filepath.Base(filePath))))
-	h.Set("Content-Type", contentType)
-	part, err := writer.CreatePart(h)
-
-	if err != nil {
-		return nil, err
-	}
-	_, err = io.Copy(part, file)
-
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
-	}
-
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", url, body)
-	if err == nil {
-		req.Header.Add("Content-Type", writer.FormDataContentType())
-	} else {
-		return nil, err
-	}
-
 	return req, err
 }
 

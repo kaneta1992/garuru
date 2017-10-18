@@ -8,7 +8,7 @@ import (
 	"net/url"
 	_ "strings"
 
-	"github.com/kaneta1992/simple-web-benchmarker/util/session"
+	"github.com/kaneta1992/garuru/util/session"
 )
 
 type Worker struct {
