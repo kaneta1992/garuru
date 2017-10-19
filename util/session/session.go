@@ -1,18 +1,14 @@
 package session
 
 import (
-	"bytes"
-	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
-	"net/textproto"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/kaneta1992/garuru/util/cache"
 )
 
 const (
@@ -23,12 +19,14 @@ type Session struct {
 	Client    *http.Client
 	Transport *http.Transport
 
-	logger *log.Logger
+	cacheStore *cache.CacheStore
+	logger     *log.Logger
 }
 
 func NewSession() *Session {
 	w := &Session{
-		logger: log.New(os.Stdout, "", 0),
+		logger:     log.New(os.Stdout, "", 0),
+		cacheStore: cache.NewCacheStore(),
 	}
 
 	jar, _ := cookiejar.New(&cookiejar.Options{})
@@ -71,8 +69,26 @@ func (s *Session) RefreshClient() {
 	}
 }
 
-func (s *Session) SendRequest(req *http.Request) (*http.Response, error) {
+func (s *Session) SendRequest(req *http.Request) (*http.Response, *cache.URLCache, error) {
+	urlCache, cacheFound := s.cacheStore.Get(req.URL.String())
+	if cacheFound {
+		urlCache.Apply(req)
+	} else {
+		urlCache = nil
+	}
 	req.Header.Set("User-Agent", UserAgent)
 
-	return s.Client.Do(req)
+	response, err := s.Client.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if response.StatusCode == 200 {
+		uc := cache.NewURLCache(response)
+		if uc != nil {
+			s.cacheStore.Set(req.URL.String(), uc)
+		}
+	}
+
+	return response, urlCache, nil
 }
