@@ -1,8 +1,9 @@
 package benchmarker
 
 import (
+	"bytes"
 	"fmt"
-	_ "io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -54,20 +55,23 @@ func (w *Worker) getResources(analyzer *HttpAnalyzer) error {
 			fmt.Printf("error resourse new request: %s\n", v.String())
 			continue
 		}
-		res, err := w.httpSession.SendRequest(req)
+		res, _, err := w.httpSession.SendRequest(req)
 		if err != nil {
 			fmt.Printf("error resourse send request: %s\n", v.String())
 			continue
 		}
 		fmt.Printf("%d\n", res.StatusCode)
+		select {
+		case <-w.endBroadCaster:
+		case w.responseStatus <- res.StatusCode:
+		}
 		res.Body.Close()
 	}
 	return nil
 }
 
 func (w *Worker) Start(startUrl string) error {
-	defaultRequest, err := w.httpSession.NewRequest("GET", startUrl, nil)
-	request := defaultRequest
+	request, err := w.httpSession.NewRequest("GET", startUrl, nil)
 	if err != nil {
 		return err
 	}
@@ -77,19 +81,31 @@ func (w *Worker) Start(startUrl string) error {
 			return nil
 		default:
 			fmt.Printf("%v\n", request.URL.String())
-			response, err := w.httpSession.SendRequest(request)
-			if err != nil {
+
+			response, cache, err := w.httpSession.SendRequest(request)
+			if err != nil || response.Body == nil {
+				fmt.Printf("error request: %s\n", err)
+				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
 				continue
 			}
 
-			fmt.Printf("%d\n", response.StatusCode)
-			w.responseStatus <- response.StatusCode
+			var body io.Reader = response.Body
+			if response.StatusCode == 304 {
+				body = bytes.NewReader(cache.Body)
+			}
 
-			analyzer, err := NewHttpAnalyzer(response)
+			fmt.Printf("%d\n", response.StatusCode)
+			select {
+			case <-w.endBroadCaster:
+			case w.responseStatus <- response.StatusCode:
+			}
+
+			analyzer, err := NewHttpAnalyzer(response.Request.URL, body)
 			w.getResources(analyzer)
 			request, err = w.createRequestFromResponse(analyzer)
 			if err != nil {
-				request = defaultRequest
+				fmt.Printf("create request error: %v\n", err)
+				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
 			}
 		}
 	}

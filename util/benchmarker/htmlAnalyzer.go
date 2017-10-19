@@ -2,8 +2,8 @@ package benchmarker
 
 import (
 	"errors"
+	"io"
 	_ "io/ioutil"
-	"net/http"
 	"net/url"
 	_ "strings"
 
@@ -15,13 +15,13 @@ type HttpAnalyzer struct {
 	document *goquery.Document
 }
 
-func NewHttpAnalyzer(response *http.Response) (*HttpAnalyzer, error) {
-	doc, err := goquery.NewDocumentFromReader(response.Body)
+func NewHttpAnalyzer(finalUrl *url.URL, bodyReader io.Reader) (*HttpAnalyzer, error) {
+	doc, err := goquery.NewDocumentFromReader(bodyReader)
 	if err != nil {
 		return nil, err
 	}
 	h := &HttpAnalyzer{
-		finalUrl: response.Request.URL,
+		finalUrl: finalUrl,
 		document: doc,
 	}
 	return h, err
