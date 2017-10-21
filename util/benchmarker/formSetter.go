@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
-	"time"
 
 	"github.com/go-yaml/yaml"
 	"github.com/ryanuber/go-glob"
@@ -35,7 +34,6 @@ func NewFormSetter(configPath string) (*FormSetter, error) {
 }
 
 func (f *FormSetter) Set(form *HtmlForm) error {
-	rand.Seed(time.Now().UnixNano())
 	for _, val := range f.params {
 		if !glob.Glob(val.Action, form.Action) || val.Method != form.Method || val.Enctype != form.EncType {
 			continue

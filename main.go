@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/ivahaev/go-logger"
@@ -31,6 +32,7 @@ func main() {
 		logger.SetLevel("INFO")
 	}
 
+	rand.Seed(55301)
 	b := benchmarker.NewBenchmarker(flag.Args()[0], configPath, num)
 	ret := b.Start(time.Duration(t))
 	fmt.Printf("%v\n", ret)
