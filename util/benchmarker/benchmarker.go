@@ -48,11 +48,11 @@ func (b *Benchmarker) Start(second time.Duration) map[int]int {
 
 	wg := new(sync.WaitGroup)
 	for _, w := range b.worker {
-		go func() {
+		go func(worker *Worker) {
 			wg.Add(1)
-			w.Start(b.StartUrl)
+			worker.Start(b.StartUrl)
 			wg.Done()
-		}()
+		}(w)
 	}
 
 	for {
