@@ -24,9 +24,14 @@ func NewBenchmarker(startUrl string, configPath string, workerNum int) *Benchmar
 		responseStatus: make(chan int, workerNum),
 		endBroadCaster: make(chan bool),
 	}
-	formSetter, err := NewFormSetter(configPath)
-	if err != nil {
-		log.Fatalf("テストデータ生成に失敗")
+
+	var formSetter *FormSetter = nil
+	var err error
+	if configPath != "" {
+		formSetter, err = NewFormSetter(configPath)
+		if err != nil {
+			log.Fatalf("テストデータ生成に失敗")
+		}
 	}
 	for i := 0; i < workerNum; i++ {
 		w := NewWorker(formSetter, b.responseStatus, b.endBroadCaster)

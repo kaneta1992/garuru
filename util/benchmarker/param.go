@@ -123,7 +123,6 @@ func (p *EncodedParams) NewRequest(method, uri string) *http.Request {
 		req.URL.RawQuery = u.Encode()
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	fmt.Printf("\n%v\n", req)
 	return req
 }
 
@@ -164,6 +163,5 @@ func (p *MultiPartParams) NewRequest(method, uri string) *http.Request {
 		return nil
 	}
 	req.Header.Add("Content-Type", writer.FormDataContentType())
-	fmt.Printf("\n%v\n", req)
 	return req
 }
