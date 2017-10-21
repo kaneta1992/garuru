@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -37,7 +38,7 @@ func (p FileParam) SetMultiPart(key string, writer *multipart.Writer) {
 	h.Set("Content-Disposition",
 		fmt.Sprintf(`form-data; name="%s"; filename="%s"`,
 			escapeQuotes(key), escapeQuotes(filepath.Base(string(p)))))
-	h.Set("Content-Type", "text/plain")
+	h.Set("Content-Type", mime.TypeByExtension(filepath.Ext("file/test.jpg")))
 	part, err := writer.CreatePart(h)
 	if err != nil {
 		// ここにきたらやばい
