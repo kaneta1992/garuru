@@ -39,6 +39,7 @@ func NewHtmlForm(s *goquery.Selection) (*HtmlForm, error) {
 	var exists bool
 	f.Action, _ = s.Attr("action")
 	f.Method, _ = s.Attr("method")
+	f.Method = strings.ToUpper(f.Method)
 	f.EncType, exists = s.Attr("enctype")
 	// enctypeはデフォルト値がある
 	if !exists {
@@ -66,5 +67,5 @@ func NewHtmlForm(s *goquery.Selection) (*HtmlForm, error) {
 }
 
 func (f *HtmlForm) BuildRequest() *http.Request {
-	return f.Params.NewRequest(strings.ToUpper(f.Method), f.Action)
+	return f.Params.NewRequest(f.Method, f.Action)
 }

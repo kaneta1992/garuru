@@ -16,13 +16,15 @@ type Worker struct {
 	httpSession    *session.Session
 	responseStatus chan<- int
 	endBroadCaster <-chan bool
+	formSetter     *FormSetter
 }
 
-func NewWorker(status chan<- int, end <-chan bool) *Worker {
+func NewWorker(fs *FormSetter, status chan<- int, end <-chan bool) *Worker {
 	w := &Worker{
 		httpSession:    session.NewSession(),
 		responseStatus: status,
 		endBroadCaster: end,
+		formSetter:     fs,
 	}
 	return w
 }
@@ -35,12 +37,36 @@ func getRandomUrl(analyzer *HttpAnalyzer) (*url.URL, error) {
 	return urls[rand.Intn(len(urls))], nil
 }
 
-func (w *Worker) createRequestFromResponse(analyzer *HttpAnalyzer) (*http.Request, error) {
-	nextUrl, err := getRandomUrl(analyzer)
+func getRandomForm(analyzer *HttpAnalyzer) (*HtmlForm, error) {
+	forms, err := analyzer.GetForms()
 	if err != nil {
 		return nil, err
 	}
-	return w.httpSession.NewRequest("GET", nextUrl.String(), nil)
+	return forms[rand.Intn(len(forms))], nil
+}
+
+func (w *Worker) createRequestFromResponse(analyzer *HttpAnalyzer) (*http.Request, error) {
+	method := rand.Intn(2)
+	for i := 0; i < 2; i++ {
+		switch method {
+		case 0: //GET
+			nextUrl, err := getRandomUrl(analyzer)
+			if err != nil {
+				method = 1
+				continue
+			}
+			return w.httpSession.NewRequest("GET", nextUrl.String(), nil)
+		case 1: //POST
+			form, err := getRandomForm(analyzer)
+			if err != nil {
+				method = 0
+				continue
+			}
+			w.formSetter.Set(form)
+			return form.BuildRequest(), nil
+		}
+	}
+	return nil, fmt.Errorf("not exists url")
 }
 
 func (w *Worker) getResources(analyzer *HttpAnalyzer) error {

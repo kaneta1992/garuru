@@ -1,4 +1,4 @@
-- action: "upload.php"
+- action: "upload.php/*"
   enctype: ""
   method: "POST"
   data:

@@ -65,6 +65,7 @@ type Params interface {
 	NewRequest(string, string) *http.Request
 	ExistKey(key string) bool
 	AddKey(key string)
+	GetKeys() []string
 	AddParam(key string, val Param)
 }
 
@@ -81,6 +82,13 @@ func (f *defaultParams) AddKey(key string) {
 		return
 	}
 	f.params[key] = []Param{}
+}
+func (f *defaultParams) GetKeys() []string {
+	var keys []string
+	for key, _ := range f.params {
+		keys = append(keys, key)
+	}
+	return keys
 }
 func (f *defaultParams) AddParam(key string, val Param) {
 	f.params[key] = append(f.params[key], val)
