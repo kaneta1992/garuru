@@ -9,7 +9,7 @@ import (
 )
 
 type Benchmarker struct {
-	StartUrl string
+	StartUrl []string
 
 	worker         []*Worker
 	statusCounter  map[int]int
@@ -17,7 +17,7 @@ type Benchmarker struct {
 	endBroadCaster chan bool
 }
 
-func NewBenchmarker(startUrl string, configPath string, workerNum int) *Benchmarker {
+func NewBenchmarker(startUrl []string, configPath string, workerNum int) *Benchmarker {
 	b := &Benchmarker{
 		StartUrl:       startUrl,
 		statusCounter:  make(map[int]int),

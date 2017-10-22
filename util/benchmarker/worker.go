@@ -106,8 +106,8 @@ func (w *Worker) getResources(analyzer *HttpAnalyzer) error {
 	return nil
 }
 
-func (w *Worker) Start(startUrl string) error {
-	request, err := w.httpSession.NewRequest("GET", startUrl, nil)
+func (w *Worker) Start(startUrl []string) error {
+	request, err := w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (w *Worker) Start(startUrl string) error {
 			response, cache, err := w.httpSession.SendRequest(request)
 			if err != nil || response.Body == nil {
 				logger.Info("リクエストに失敗", err)
-				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
+				request, _ = w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 				continue
 			}
 
@@ -145,7 +145,7 @@ func (w *Worker) Start(startUrl string) error {
 			}
 			if err != nil {
 				logger.Info("リクエストの作成に失敗", err)
-				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
+				request, _ = w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 			}
 		}
 	}

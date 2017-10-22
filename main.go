@@ -32,8 +32,9 @@ func main() {
 		logger.SetLevel("INFO")
 	}
 
-	rand.Seed(55301)
-	b := benchmarker.NewBenchmarker(flag.Args()[0], configPath, num)
+	rand.Seed(time.Now().UnixNano())
+	fmt.Printf("%v\n", flag.Args())
+	b := benchmarker.NewBenchmarker(flag.Args(), configPath, num)
 	ret := b.Start(time.Duration(t))
 	fmt.Printf("%v\n", ret)
 	return
