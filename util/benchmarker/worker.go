@@ -3,6 +3,7 @@ package benchmarker
 import (
 	"bytes"
 	"fmt"
+	"github.com/ivahaev/go-logger"
 	"io"
 	"math/rand"
 	"net/http"
@@ -16,13 +17,15 @@ type Worker struct {
 	httpSession    *session.Session
 	responseStatus chan<- int
 	endBroadCaster <-chan bool
+	formSetter     *FormSetter
 }
 
-func NewWorker(status chan<- int, end <-chan bool) *Worker {
+func NewWorker(fs *FormSetter, status chan<- int, end <-chan bool) *Worker {
 	w := &Worker{
 		httpSession:    session.NewSession(),
 		responseStatus: status,
 		endBroadCaster: end,
+		formSetter:     fs,
 	}
 	return w
 }
@@ -35,7 +38,40 @@ func getRandomUrl(analyzer *HttpAnalyzer) (*url.URL, error) {
 	return urls[rand.Intn(len(urls))], nil
 }
 
+func getRandomForm(analyzer *HttpAnalyzer) (*HtmlForm, error) {
+	forms, err := analyzer.GetForms()
+	if err != nil {
+		return nil, err
+	}
+	return forms[rand.Intn(len(forms))], nil
+}
+
 func (w *Worker) createRequestFromResponse(analyzer *HttpAnalyzer) (*http.Request, error) {
+	method := rand.Intn(2)
+	for i := 0; i < 2; i++ {
+		switch method {
+		case 0: //GET
+			nextUrl, err := getRandomUrl(analyzer)
+			if err != nil {
+				method = 1
+				continue
+			}
+			return w.httpSession.NewRequest("GET", nextUrl.String(), nil)
+		case 1: //POST
+			form, err := getRandomForm(analyzer)
+			if err != nil {
+				method = 0
+				continue
+			}
+			w.formSetter.Set(form)
+			logger.Info(form, form.Params)
+			return form.BuildRequest(), nil
+		}
+	}
+	return nil, fmt.Errorf("not exists url")
+}
+
+func (w *Worker) createGETRequestFromResponse(analyzer *HttpAnalyzer) (*http.Request, error) {
 	nextUrl, err := getRandomUrl(analyzer)
 	if err != nil {
 		return nil, err
@@ -49,18 +85,18 @@ func (w *Worker) getResources(analyzer *HttpAnalyzer) error {
 		return err
 	}
 	for _, v := range urls {
-		fmt.Printf("%v\n", v.String())
+		logger.Info(v.String())
 		req, err := w.httpSession.NewRequest("GET", v.String(), nil)
 		if err != nil {
-			fmt.Printf("error resourse new request: %s\n", v.String())
+			logger.Info("リソースのリクエスト作成に失敗", v.String())
 			continue
 		}
 		res, _, err := w.httpSession.SendRequest(req)
 		if err != nil {
-			fmt.Printf("error resourse send request: %s\n", v.String())
+			logger.Info("リソースのリクエストに失敗", v.String())
 			continue
 		}
-		fmt.Printf("%d\n", res.StatusCode)
+		logger.Info(v.String(), res.StatusCode)
 		select {
 		case <-w.endBroadCaster:
 		case w.responseStatus <- res.StatusCode:
@@ -70,8 +106,8 @@ func (w *Worker) getResources(analyzer *HttpAnalyzer) error {
 	return nil
 }
 
-func (w *Worker) Start(startUrl string) error {
-	request, err := w.httpSession.NewRequest("GET", startUrl, nil)
+func (w *Worker) Start(startUrl []string) error {
+	request, err := w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 	if err != nil {
 		return err
 	}
@@ -80,12 +116,12 @@ func (w *Worker) Start(startUrl string) error {
 		case <-w.endBroadCaster:
 			return nil
 		default:
-			fmt.Printf("%v\n", request.URL.String())
-
+			requestURL := request.URL.String()
+			logger.Info(requestURL)
 			response, cache, err := w.httpSession.SendRequest(request)
 			if err != nil || response.Body == nil {
-				fmt.Printf("error request: %s\n", err)
-				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
+				logger.Info("リクエストに失敗", err)
+				request, _ = w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 				continue
 			}
 
@@ -94,7 +130,7 @@ func (w *Worker) Start(startUrl string) error {
 				body = bytes.NewReader(cache.Body)
 			}
 
-			fmt.Printf("%d\n", response.StatusCode)
+			logger.Info(requestURL, response.StatusCode)
 			select {
 			case <-w.endBroadCaster:
 			case w.responseStatus <- response.StatusCode:
@@ -102,10 +138,14 @@ func (w *Worker) Start(startUrl string) error {
 
 			analyzer, err := NewHttpAnalyzer(response.Request.URL, body)
 			w.getResources(analyzer)
-			request, err = w.createRequestFromResponse(analyzer)
+			if w.formSetter == nil {
+				request, err = w.createGETRequestFromResponse(analyzer)
+			} else {
+				request, err = w.createRequestFromResponse(analyzer)
+			}
 			if err != nil {
-				fmt.Printf("create request error: %v\n", err)
-				request, _ = w.httpSession.NewRequest("GET", startUrl, nil)
+				logger.Info("リクエストの作成に失敗", err)
+				request, _ = w.httpSession.NewRequest("GET", startUrl[rand.Intn(len(startUrl))], nil)
 			}
 		}
 	}

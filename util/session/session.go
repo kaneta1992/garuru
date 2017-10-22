@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/kaneta1992/garuru/util/cache"
@@ -59,10 +58,6 @@ func (s *Session) NewPostFormRequest(url string, body io.Reader) (*http.Request,
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return req, err
-}
-
-func escapeQuotes(s string) string {
-	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(s)
 }
 
 func (s *Session) RefreshClient() {

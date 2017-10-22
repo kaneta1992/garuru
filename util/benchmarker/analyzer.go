@@ -1,11 +1,10 @@
 package benchmarker
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	_ "io/ioutil"
 	"net/url"
-	_ "strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -28,24 +27,44 @@ func NewHttpAnalyzer(finalUrl *url.URL, bodyReader io.Reader) (*HttpAnalyzer, er
 }
 
 func (h *HttpAnalyzer) GetLinks() ([]*url.URL, error) {
-	urls := make([]*url.URL, 0)
+	urls := []*url.URL{}
 	h.document.Find("a").Each(func(_ int, s *goquery.Selection) {
 		href, exists := s.Attr("href")
 		if exists {
 			linkUrl, err := h.finalUrl.Parse(href)
-			if err == nil {
-				urls = append(urls, linkUrl)
+			if err != nil {
+				return
 			}
+			urls = append(urls, linkUrl)
 		}
 	})
 
 	size := len(urls)
 	if size < 1 {
-		return nil, errors.New("not exist link")
+		return nil, fmt.Errorf("not exist link")
 	}
 	return urls, nil
 }
 
+func (h *HttpAnalyzer) GetForms() ([]*HtmlForm, error) {
+	forms := []*HtmlForm{}
+	h.document.Find("form").Each(func(_ int, s *goquery.Selection) {
+		form, err := NewHtmlForm(s)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		action, _ := h.finalUrl.Parse(form.Action)
+		form.Action = action.String()
+		forms = append(forms, form)
+	})
+
+	size := len(forms)
+	if size < 1 {
+		return nil, fmt.Errorf("not exist form")
+	}
+	return forms, nil
+}
 func (h *HttpAnalyzer) GetResourcesURL() ([]*url.URL, error) {
 	urls := make([]*url.URL, 0)
 	h.document.Find("img,script").Each(func(_ int, s *goquery.Selection) {
@@ -74,7 +93,7 @@ func (h *HttpAnalyzer) GetResourcesURL() ([]*url.URL, error) {
 
 	size := len(urls)
 	if size < 1 {
-		return nil, errors.New("not exist resource")
+		return nil, fmt.Errorf("not exist resource")
 	}
 	return urls, nil
 }

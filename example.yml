@@ -1,0 +1,24 @@
+- action: "upload.php/*"
+  enctype: ""
+  method: "POST"
+  data:
+  - types:
+      one: file
+      two: text
+    values:
+    - one: [one]
+      two: [two]
+    - one: [e]
+      two: [ei]
+  - types:
+      three: text
+    values:
+    - three: [pora]
+- action: "test.php"
+  enctype: ""
+  method: "POST"
+  data:
+  - types:
+      test: text
+    values:
+    - test: [test]

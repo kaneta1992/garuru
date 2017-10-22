@@ -2,13 +2,14 @@ package benchmarker
 
 import (
 	_ "io/ioutil"
+	"log"
 	_ "strings"
 	"sync"
 	"time"
 )
 
 type Benchmarker struct {
-	StartUrl string
+	StartUrl []string
 
 	worker         []*Worker
 	statusCounter  map[int]int
@@ -16,15 +17,24 @@ type Benchmarker struct {
 	endBroadCaster chan bool
 }
 
-func NewBenchmarker(startUrl string, workerNum int) *Benchmarker {
+func NewBenchmarker(startUrl []string, configPath string, workerNum int) *Benchmarker {
 	b := &Benchmarker{
 		StartUrl:       startUrl,
 		statusCounter:  make(map[int]int),
 		responseStatus: make(chan int, workerNum),
 		endBroadCaster: make(chan bool),
 	}
+
+	var formSetter *FormSetter = nil
+	var err error
+	if configPath != "" {
+		formSetter, err = NewFormSetter(configPath)
+		if err != nil {
+			log.Fatalf("テストデータ生成に失敗")
+		}
+	}
 	for i := 0; i < workerNum; i++ {
-		w := NewWorker(b.responseStatus, b.endBroadCaster)
+		w := NewWorker(formSetter, b.responseStatus, b.endBroadCaster)
 		b.worker = append(b.worker, w)
 	}
 	return b
@@ -38,11 +48,11 @@ func (b *Benchmarker) Start(second time.Duration) map[int]int {
 
 	wg := new(sync.WaitGroup)
 	for _, w := range b.worker {
-		go func() {
+		go func(worker *Worker) {
 			wg.Add(1)
-			w.Start(b.StartUrl)
+			worker.Start(b.StartUrl)
 			wg.Done()
-		}()
+		}(w)
 	}
 
 	for {
